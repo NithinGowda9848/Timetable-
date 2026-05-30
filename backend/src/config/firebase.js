@@ -1,0 +1,42 @@
+const admin = require('firebase-admin');
+
+let initialized = false;
+
+/**
+ * Initializes Firebase Admin SDK.
+ * Supports both service account file path and inline env credentials.
+ */
+function initializeFirebase() {
+  if (initialized || admin.apps.length > 0) return;
+
+  let credential;
+
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
+    // Option A: Service account JSON file
+    const serviceAccount = require(
+      require('path').resolve(process.env.FIREBASE_SERVICE_ACCOUNT_PATH)
+    );
+    credential = admin.credential.cert(serviceAccount);
+  } else if (process.env.FIREBASE_PROJECT_ID) {
+    // Option B: Inline env vars
+    credential = admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    });
+  } else {
+    throw new Error(
+      'Firebase credentials not configured. Set FIREBASE_SERVICE_ACCOUNT_PATH or inline env vars.'
+    );
+  }
+
+  admin.initializeApp({ credential });
+  initialized = true;
+  console.log('✅ Firebase Admin SDK initialized.');
+}
+
+initializeFirebase();
+
+const auth = admin.auth();
+
+module.exports = { admin, auth };
